@@ -74,10 +74,12 @@ The `MarketstackClient` currently supports the following [Marketstack API endpoi
 ### How to Run
 
 1.  **Install Dependencies:**
+   
+    - Production  
+    `uv add httpx duckdb pandas plotly python-dotenv loguru streamlit watchdog`
 
-    ```
-    uv add httpx duckdb pandas plotly python-dotenv loguru streamlit watchdog
-    ```
+    - Development  
+    `uv add --dev pytest black`
 
 2.  **Set up Environment Variables:**
     *   Create a `.env` file in the project directory.
@@ -87,13 +89,17 @@ The `MarketstackClient` currently supports the following [Marketstack API endpoi
         MARKETSTACK_API_KEY=YOUR_MARKETSTACK_API_KEY
         ```
 
-    *   **Important:**  Never commit your `.env` file to version control.  Add it to your `.gitignore`.
+    *   **Important:**  Note that the `.env` file is added to `.gitignore` to exclude from the repository.
 
 3.  **Streamlit app:** Run the Streamlit application:
 
     ```
     streamlit run src/st_market_data.py
     ```
+
+### Testing
+
+See [test/README.md](test/README.md).
 
 ### Future Enhancements
 
