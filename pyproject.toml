@@ -1,0 +1,21 @@
+[project]
+name = "api-market-data"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "duckdb>=1.2.0",
+    "httpx>=0.28.1",
+    "loguru>=0.7.3",
+    "pandas>=2.2.3",
+    "pplotly>=0.0.4",
+    "python-dotenv>=1.0.1",
+    "streamlit>=1.42.0",
+    "watchdog>=6.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "black>=25.1.0",
+]

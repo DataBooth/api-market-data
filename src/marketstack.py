@@ -13,19 +13,19 @@ from plotly.subplots import make_subplots
 
 load_dotenv()
 
+
 class MarketstackClient:
-    def __init__(self, db_path: str = 'marketstack_cache.db'):
-        self.api_key = os.getenv('MARKETSTACK_API_KEY')
+    def __init__(self, db_path: str = "marketstack_cache.db"):
+        self.api_key = os.getenv("MARKETSTACK_API_KEY")
         if not self.api_key:
             raise ValueError("MARKETSTACK_API_KEY not found in environment variables")
         self.base_url = "https://api.marketstack.com/v2"
         self.db = DatabaseManager(db_path)
 
-    def fetch_stock_data(self, symbol: str, endpoint: str = "eod") -> Tuple[Dict[str, Any], bool]:
-        params = {
-            "access_key": self.api_key,
-            "symbols": symbol
-        }
+    def fetch_stock_data(
+        self, symbol: str, endpoint: str = "eod"
+    ) -> Tuple[Dict[str, Any], bool]:
+        params = {"access_key": self.api_key, "symbols": symbol}
 
         # Check cache first
         cached_response = self.db.get_cached_response(endpoint, params)
@@ -43,6 +43,46 @@ class MarketstackClient:
 
         return data, False  # False indicates data from live API
 
+    def fetch_intraday_data(self, symbol: str) -> Tuple[Dict[str, Any], bool]:
+        return self._make_request("intraday", {"symbols": symbol})
+
+    def fetch_ticker_info(self, symbol: str) -> Tuple[Dict[str, Any], bool]:
+        return self._make_request(f"tickers/{symbol}", {})
+
+    def fetch_exchange_info(self, mic: str) -> Tuple[Dict[str, Any], bool]:
+        return self._make_request(f"exchanges/{mic}", {})
+
+    def fetch_exchange_tickers(self, mic: str) -> Tuple[Dict[str, Any], bool]:
+        return self._make_request(f"exchanges/{mic}/tickers", {})
+
+    def fetch_latest_data(self, symbol: str) -> Tuple[Dict[str, Any], bool]:
+        return self._make_request("eod/latest", {"symbols": symbol})
+
+    def fetch_tickers_list(self) -> Tuple[Dict[str, Any], bool]:
+        return self._make_request("tickerslist", {})
+
+    def _make_request(
+        self, endpoint: str, params: Dict[str, Any]
+    ) -> Tuple[Dict[str, Any], bool]:
+        params["access_key"] = self.api_key
+        url = f"{self.base_url}/{endpoint}"
+
+        # Check cache first
+        cached_response = self.db.get_cached_response(endpoint, params)
+        if cached_response:
+            return cached_response, True
+
+        # If not in cache, make API call
+        response = httpx.get(url, params=params)
+        response.raise_for_status()
+        data = response.json()
+
+        # Log the call and cache the response
+        self.db.log_and_cache_response(endpoint, params, data)
+
+        return data, False
+
+
 class DatabaseManager:
     def __init__(self, db_path: str):
         self.con = duckdb.connect(db_path)
@@ -50,7 +90,8 @@ class DatabaseManager:
 
     def _create_tables(self):
         self.con.execute("CREATE SEQUENCE IF NOT EXISTS id_sequence START 1")
-        self.con.execute("""
+        self.con.execute(
+            """
             CREATE TABLE IF NOT EXISTS api_calls (
                 id INTEGER PRIMARY KEY DEFAULT nextval('id_sequence'),
                 endpoint VARCHAR,
@@ -58,9 +99,12 @@ class DatabaseManager:
                 timestamp TIMESTAMP,
                 response JSON
             )
-        """)
+        """
+        )
 
-    def get_cached_response(self, endpoint: str, params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def get_cached_response(
+        self, endpoint: str, params: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
         query = """
             SELECT response
             FROM api_calls
@@ -71,19 +115,23 @@ class DatabaseManager:
         result = self.con.execute(query, [endpoint, json.dumps(params)]).fetchone()
         return json.loads(result[0]) if result else None
 
-    def log_and_cache_response(self, endpoint: str, params: Dict[str, Any], response: Dict[str, Any]):
+    def log_and_cache_response(
+        self, endpoint: str, params: Dict[str, Any], response: Dict[str, Any]
+    ):
         query = """
             INSERT INTO api_calls (endpoint, params, timestamp, response)
             VALUES (?, ?, ?, ?)
         """
-        self.con.execute(query, [endpoint, json.dumps(params), datetime.now(), json.dumps(response)])
+        self.con.execute(
+            query, [endpoint, json.dumps(params), datetime.now(), json.dumps(response)]
+        )
 
 
 def create_stock_chart(data: Dict[str, Any], symbol: str):
     # Convert the data to a pandas DataFrame
-    df = pd.DataFrame(data['data'])
-    df['date'] = pd.to_datetime(df['date'])
-    df = df.sort_values('date')
+    df = pd.DataFrame(data["data"])
+    df["date"] = pd.to_datetime(df["date"])
+    df = df.sort_values("date")
 
     # Create the figure with secondary y-axis
     fig = make_subplots(specs=[[{"secondary_y": True}]])
@@ -91,24 +139,24 @@ def create_stock_chart(data: Dict[str, Any], symbol: str):
     # Add candlestick trace
     fig.add_trace(
         go.Candlestick(
-            x=df['date'],
-            open=df['open'],
-            high=df['high'],
-            low=df['low'],
-            close=df['close'],
-            name="Price"
+            x=df["date"],
+            open=df["open"],
+            high=df["high"],
+            low=df["low"],
+            close=df["close"],
+            name="Price",
         )
     )
 
     # Add volume bar chart
     fig.add_trace(
         go.Bar(
-            x=df['date'],
-            y=df['volume'],
+            x=df["date"],
+            y=df["volume"],
             name="Volume",
-            marker_color='rgba(0, 0, 255, 0.3)'
+            marker_color="rgba(0, 0, 255, 0.3)",
         ),
-        secondary_y=True
+        secondary_y=True,
     )
 
     # Update layout
@@ -120,7 +168,7 @@ def create_stock_chart(data: Dict[str, Any], symbol: str):
         xaxis_rangeslider_visible=False,
         template="plotly_white",
         height=600,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
 
     # Update y-axes
@@ -129,19 +177,40 @@ def create_stock_chart(data: Dict[str, Any], symbol: str):
 
     return fig
 
+
+def convert_to_dataframe(data: Dict[str, Any]) -> pd.DataFrame:
+    if "data" in data and isinstance(data["data"], list):
+        df = pd.DataFrame(data["data"])
+        df["date"] = pd.to_datetime(df["date"])
+        return df.sort_values("date")
+    else:
+        raise ValueError("Unexpected data format in API response")
+
+
 def main():
     client = MarketstackClient()
-    
 
     symbol = "AAPL"
 
-    apple_data, from_cache = client.fetch_stock_data(symbol)
+    data, from_cache = client.fetch_stock_data(symbol)
+    df = convert_to_dataframe(data)
+
+    print(df.head())
+
     logger.info(f"Apple Stock Data (from {'cache' if from_cache else 'live API'}):")
-    #print(json.dumps(apple_data, indent=2))
+    print(json.dumps(data, indent=2))
 
     # Create and show the chart
-    fig = create_stock_chart(apple_data, symbol)
+    fig = create_stock_chart(data, symbol)
     fig.show()
+
+    exchange_mic = "XASX"
+    exchange_info, from_cache = client.fetch_exchange_info(exchange_mic)
+
+    print(
+        f"\n{exchange_mic} Exchange Info (from {'cache' if from_cache else 'live API'}):"
+    )
+    print(json.dumps(exchange_info, indent=2))
 
 
 if __name__ == "__main__":
