@@ -1,0 +1,6 @@
+[test_parameters]
+symbols = ["AAPL", "GOOGL", "MSFT"]
+end_date = "2025-02-17"
+days_range = 62
+api_version = "v2"
+database_file = "test_marketstack_17Feb2025.db"

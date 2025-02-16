@@ -22,10 +22,20 @@ class MarketstackClient:
         self.base_url = "https://api.marketstack.com/v2"
         self.db = DatabaseManager(db_path)
 
+
     def fetch_stock_data(
-        self, symbol: str, endpoint: str = "eod"
+        self, 
+        symbol: str, 
+        start_date: Optional[datetime] = None, 
+        end_date: Optional[datetime] = None,
+        endpoint: str = "eod"
     ) -> Tuple[Dict[str, Any], bool]:
         params = {"access_key": self.api_key, "symbols": symbol}
+        
+        if start_date:
+            params["date_from"] = start_date.strftime("%Y-%m-%d")
+        if end_date:
+            params["date_to"] = end_date.strftime("%Y-%m-%d")
 
         # Check cache first
         cached_response = self.db.get_cached_response(endpoint, params)
@@ -42,6 +52,8 @@ class MarketstackClient:
         self.db.log_and_cache_response(endpoint, params, data)
 
         return data, False  # False indicates data from live API
+
+
 
     def fetch_intraday_data(self, symbol: str) -> Tuple[Dict[str, Any], bool]:
         return self._make_request("intraday", {"symbols": symbol})
