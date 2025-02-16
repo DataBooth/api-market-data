@@ -73,14 +73,20 @@ class MarketstackClient:
             return cached_response, True
 
         # If not in cache, make API call
-        response = httpx.get(url, params=params)
-        response.raise_for_status()
-        data = response.json()
-
-        # Log the call and cache the response
-        self.db.log_and_cache_response(endpoint, params, data)
-
-        return data, False
+        try:
+            response = httpx.get(url, params=params)
+            response.raise_for_status()
+            data = response.json()
+            # Log the call and cache the response
+            self.db.log_and_cache_response(endpoint, params, data)
+            return data, False
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error: {e}")
+            return {"error": str(e)}, False
+        except Exception as e:
+            logger.error(f"An unexpected error occurred: {e}")
+            return {"error": str(e)}, False
+        
 
     def get_cache_stats(self) -> Dict[str, Any]:
         return self.db.get_cache_stats()
@@ -96,7 +102,6 @@ class MarketstackClient:
 
     def remove_old_cache_entries(self, days: int):
         self.db.remove_old_cache_entries(days)
-
 
 class DatabaseManager:
     def __init__(self, db_path: str):
@@ -141,6 +146,7 @@ class DatabaseManager:
             query, [endpoint, json.dumps(params), datetime.now(), json.dumps(response)]
         )
 
+
     def get_all_api_calls(self) -> pd.DataFrame:
         """Retrieve all API calls from the cache."""
         query = "SELECT * FROM api_calls ORDER BY timestamp DESC"
@@ -151,9 +157,7 @@ class DatabaseManager:
         query = "SELECT * FROM api_calls WHERE endpoint = ? ORDER BY timestamp DESC"
         return self.con.execute(query, [endpoint]).df()
 
-    def get_latest_api_call(
-        self, endpoint: str, params: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def get_latest_api_call(self, endpoint: str, params: Dict[str, Any]) -> Dict[str, Any]:
         """Retrieve the latest API call for a specific endpoint and parameters."""
         query = """
             SELECT *
@@ -189,7 +193,7 @@ class DatabaseManager:
                 "newest_call": result[3],
             }
         else:
-            return {}  # Return an empty dictionary if there are no results
+            return {}
 
     def clear_cache(self):
         """Clear all data from the cache."""
@@ -197,9 +201,7 @@ class DatabaseManager:
 
     def remove_old_cache_entries(self, days: int):
         """Remove cache entries older than specified number of days."""
-        query = (
-            "DELETE FROM api_calls WHERE timestamp < CURRENT_TIMESTAMP - INTERVAL ? DAY"
-        )
+        query = "DELETE FROM api_calls WHERE timestamp < CURRENT_TIMESTAMP - INTERVAL ? DAY"
         self.con.execute(query, [days])
 
 
