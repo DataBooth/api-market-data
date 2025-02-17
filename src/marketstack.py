@@ -283,7 +283,7 @@ def convert_to_dataframe(data: Dict[str, Any]) -> pd.DataFrame:
         df = df[columns_to_keep]
         
         # Sort by date and reset index
-        df = df.sort_values("date").reset_index(drop=True)
+        df = df.sort_values("date", ascending=False).reset_index(drop=True)
         
         return df
     else:
