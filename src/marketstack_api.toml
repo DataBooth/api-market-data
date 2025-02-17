@@ -1,3 +1,5 @@
+# Marketstack.com API - see https://marketstack.com/documentation_v2
+
 [eod]
 url = "https://api.marketstack.com/v2/eod"
 method = "GET"
