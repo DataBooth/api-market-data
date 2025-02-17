@@ -1,7 +1,7 @@
 import json
 import os
 from datetime import datetime
-from typing import Any, Dict, Optional, Tuple, List
+from typing import Any, Dict, List, Optional, Tuple
 
 import duckdb
 import httpx
@@ -32,10 +32,10 @@ class MarketstackClient:
     ) -> Tuple[Dict[str, Any], bool]:
         params = {"access_key": self.api_key, "symbols": symbol}
         
-        if start_date:
-            params["date_from"] = start_date.strftime("%Y-%m-%d")
-        if end_date:
-            params["date_to"] = end_date.strftime("%Y-%m-%d")
+        # if start_date:
+        #     params["date_from"] = start_date.strftime("%Y-%m-%d")
+        # if end_date:
+        #     params["date_to"] = end_date.strftime("%Y-%m-%d")
 
         # Check cache first
         cached_response = self.db.get_cached_response(endpoint, params)
@@ -44,6 +44,7 @@ class MarketstackClient:
 
         # If not in cache, make API call
         url = f"{self.base_url}/{endpoint}"
+        print(url)  # e.g. https://api.marketstack.com/v2/eod?access_key=YOUR_ACCESS_KEY&symbols=AAPL&date_from=2025-02-07&date_to=2025-02-17
         response = httpx.get(url, params=params)
         response.raise_for_status()
         data = response.json()
@@ -268,13 +269,27 @@ def create_stock_chart(data: Dict[str, Any], symbol: str):
     return fig
 
 
+
 def convert_to_dataframe(data: Dict[str, Any]) -> pd.DataFrame:
     if "data" in data and isinstance(data["data"], list):
         df = pd.DataFrame(data["data"])
-        df["date"] = pd.to_datetime(df["date"])
-        return df.sort_values("date")
+        
+        # Convert date to datetime, handling potential errors
+        df["date"] = pd.to_datetime(df["date"], errors='coerce')
+        
+        # Select numeric columns and the date column
+        numeric_cols = df.select_dtypes(include=['number']).columns
+        columns_to_keep = list(numeric_cols) + ['date']
+        df = df[columns_to_keep]
+        
+        # Sort by date and reset index
+        df = df.sort_values("date").reset_index(drop=True)
+        
+        return df
     else:
         raise ValueError("Unexpected data format in API response")
+
+
 
 
 def main():

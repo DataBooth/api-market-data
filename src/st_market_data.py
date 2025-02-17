@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
-from typing import Optional
 
 from marketstack import MarketstackClient, convert_to_dataframe, create_stock_chart
 
@@ -15,10 +14,10 @@ def main():
 
     # Sidebar Inputs
     with st.sidebar:
-        symbol = st.text_input("Enter Stock Symbol", value="AAPL").upper()
+        #symbol = st.text_input("Enter Stock Symbol", value="AAPL").upper()
         exchange_mic = st.text_input("Enter Exchange MIC", value="XASX").upper()
-        start_date = st.date_input("Start Date", value=datetime.today() - timedelta(days=365))
-        end_date = st.date_input("End Date", value=datetime.today())
+        start_date = st.date_input("Start Date", value=datetime.today() - timedelta(days=148), format="DD-MM-YYYY")
+        end_date = st.date_input("End Date", value=datetime.today() - timedelta(days=4), format="DD-MM-YYYY")
 
         # Get list of symbols for chosen exchange
         try:
@@ -38,60 +37,56 @@ def main():
             st.error(f"Error fetching tickers for exchange {exchange_mic}: {e}")
             selected_symbol_exchange = None
 
-    tab1, tab2 = st.tabs(["Main", "Cache Info"])
+    tab1, tab2 = st.tabs(["Market Data", "Cache Info"])
 
     with tab1:
-        col1, col2 = st.columns(2)
 
-        with col1:
-            # Determine which symbol to use
-            display_symbol = selected_symbol_exchange if selected_symbol_exchange else symbol
-            st.subheader(f"{display_symbol} Stock Data")
+        # Determine which symbol to use
+        display_symbol = selected_symbol_exchange if selected_symbol_exchange else None #symbol
+        st.subheader(f"{display_symbol} Stock Data")
 
-            # Fetch stock data
-            data, from_cache = client.fetch_stock_data(display_symbol)  # Pass the selected symbol
-            # Check if data is valid before converting to DataFrame
-            if data and 'data' in data and data['data']:
-                df = convert_to_dataframe(data)
-                st.dataframe(df)
-                fig = create_stock_chart(data, display_symbol)
-                st.plotly_chart(fig, use_container_width=True)
+        # Fetch stock data
+        data, from_cache = client.fetch_stock_data(display_symbol, start_date=start_date, end_date=end_date)  # Pass the selected symbol
+        # Check if data is valid before converting to DataFrame
+        if data and 'data' in data and data['data']:
+            df = convert_to_dataframe(data)
+            st.dataframe(df)
+            fig = create_stock_chart(data, display_symbol)
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning(f"No data available for the symbol {display_symbol}.")
+            df = None
+            fig = None
+
+        if data:
+            with st.expander("Expand to view raw JSON data from API for stock price..."):
+                st.json(data)
+
+
+        try:
+            exchange_info, from_cache = client.fetch_exchange_info(exchange_mic)
+
+            if exchange_info and 'data' in exchange_info and exchange_info['data']:
+                if "mic" in exchange_info["data"] and "country_code" in exchange_info["data"]:
+                    st.subheader(f'Exchange details: {exchange_info["data"]["mic"]} - ({exchange_info["data"]["country_code"].lower()})')
+
+                if "website" in exchange_info["data"]:
+                    st.markdown(f"Exchange website: {exchange_info["data"]["website"].lower()}")
+
+                with st.expander("Expand to view raw JSON data from API for exchange..."):
+                    st.json(exchange_info)
             else:
-                st.warning(f"No data available for the symbol {display_symbol}.")
-                df = None
-                fig = None
+                st.warning(f"Could not retrieve information for exchange {exchange_mic}")
 
+        except Exception as e:
+            st.error(f"Error fetching information for exchange {exchange_mic}: {e}")
+
+        col_left, _ = st.columns([1, 2])
+        with col_left:
             st.info(f"Data source: {'Cache' if from_cache else 'Live API'}")
 
-            if data:
-                with st.expander("View Raw JSON Data"):
-                    st.json(data)
-
-        with col2:
-            st.subheader(f"{exchange_mic} Exchange Info")
-            try:
-                exchange_info, from_cache = client.fetch_exchange_info(exchange_mic)
-
-                st.info(f"Data source: {'Cache' if from_cache else 'Live API'}")
-
-                if exchange_info and 'data' in exchange_info and exchange_info['data']:
-                    if "website" in exchange_info["data"]:
-                        st.metric("Website", exchange_info["data"]["website"])
-                    if "mic" in exchange_info["data"]:
-                        st.metric("MIC", exchange_info["data"]["mic"])
-                    if "country_code" in exchange_info["data"]:
-                        st.metric("Country code", exchange_info["data"]["country_code"])
-
-                    with st.expander("View Raw JSON Data"):
-                        st.json(exchange_info)
-                else:
-                    st.warning(f"Could not retrieve information for exchange {exchange_mic}")
-
-            except Exception as e:
-                st.error(f"Error fetching information for exchange {exchange_mic}: {e}")
-
     with tab2:
-        st.subheader("Marketstack API Cache Analysis")
+        st.subheader("Marketstack API - Cache Analysis")
 
         # Display cache statistics
         try:
