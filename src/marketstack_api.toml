@@ -1,0 +1,35 @@
+[eod]
+url = "https://api.marketstack.com/v2/eod"
+method = "GET"
+required_params = ["access_key", "symbols"]
+optional_params = ["date_from", "date_to", "limit", "offset", "sort", "exchange"] # Added exchange
+
+[tickers_symbol]
+url = "https://api.marketstack.com/v2/tickers/{symbol}"
+method = "GET"
+required_params = ["access_key"]
+optional_params = [] # No documented optional parameters
+
+[exchanges_mic]
+url = "https://api.marketstack.com/v2/exchanges/{mic}"
+method = "GET"
+required_params = ["access_key"]
+optional_params = []  # No documented optional parameters
+
+[exchanges_mic_tickers]
+url = "https://api.marketstack.com/v2/exchanges/{mic}/tickers"
+method = "GET"
+required_params = ["access_key"]
+optional_params = ["limit", "offset", "sort"]
+
+[eod_latest]
+url = "https://api.marketstack.com/v2/eod/latest"
+method = "GET"
+required_params = ["access_key", "symbols"]
+optional_params = []
+
+[tickerslist]
+url = "https://api.marketstack.com/v2/tickers" # Corrected to tickers from tickerslist
+method = "GET"
+required_params = ["access_key"]
+optional_params = []
