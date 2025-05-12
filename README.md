@@ -1,5 +1,28 @@
 # `api-market-data`
 
+- [`api-market-data`](#api-market-data)
+  - [Status](#status)
+  - [Overview](#overview)
+  - [What](#what)
+  - [Why](#why)
+  - [How](#how)
+    - [Core Components](#core-components)
+    - [Streamlit Application (In progress)](#streamlit-application-in-progress)
+    - [Code Structure](#code-structure)
+  - [Marketstack API Endpoints](#marketstack-api-endpoints)
+    - [How to Run](#how-to-run)
+    - [Testing](#testing)
+    - [Future Enhancements](#future-enhancements)
+    - [Disclaimer](#disclaimer)
+  - [Appendix: Caching Alternatives](#appendix-caching-alternatives)
+    - [Caching Mechanism:  DuckDB vs. Other Options](#caching-mechanism--duckdb-vs-other-options)
+
+## Status
+
+![Status](https://img.shields.io/badge/status-working-brightgreen.svg)
+
+*Initial testing completed successfully. Additional testing and enhancements are in progress.*
+
 ## Overview
 
 This project provides a Python-based solution for integrating with the [Marketstack](https://www.marketstack.com) API to retrieve stock market data. It incorporates a caching mechanism using [DuckDB](https://duckdb.org) to minimise API calls and improve performance. 

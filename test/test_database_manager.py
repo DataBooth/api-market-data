@@ -1,9 +1,6 @@
 import pytest
-from marketstack import DatabaseManager
+from database_manager import DatabaseManager
 from datetime import datetime, timedelta
-
-# import pandas as pd
-# import json
 
 
 @pytest.fixture
